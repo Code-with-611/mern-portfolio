@@ -1,21 +1,44 @@
-const router = require("express").Router();
+const express = require("express");
+const router = express.Router();
 const Project = require("../models/Project");
-const auth = require("../middleware/auth");
+const { parser } = require("../utils/cloudinary");
 
+//GET ALL PROJECTS 
 router.get("/", async (req, res) => {
-  const projects = await Project.find();
-  res.json(projects);
+  try {
+    const projects = await Project.find().sort({ createdAt: -1 });
+    res.json(projects);
+  } catch (error) {
+    res.status(500).json({ error: "Server Error" });
+  }
 });
 
-router.post("/", auth, async (req, res) => {
-  const project = new Project(req.body);
-  await project.save();
-  res.json(project);
+// ADD PROJECT WITH IMAGE 
+router.post("/", parser.single("image"), async (req, res) => {
+  try {
+    const projectData = req.body;
+
+    if (req.file) {
+      projectData.imageUrl = req.file.path; // Cloudinary URL
+    }
+
+    const project = new Project(projectData);
+    await project.save();
+
+    res.status(201).json(project);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-router.delete("/:id", auth, async (req, res) => {
-  await Project.findByIdAndDelete(req.params.id);
-  res.json("Project deleted");
+// DELETE PROJECT 
+router.delete("/:id", async (req, res) => {
+  try {
+    await Project.findByIdAndDelete(req.params.id);
+    res.json({ message: "Project Deleted" });
+  } catch (err) {
+    res.status(500).json({ error: "Delete failed" });
+  }
 });
 
 module.exports = router;

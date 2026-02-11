@@ -1,18 +1,24 @@
-const router = require("express").Router();
-const User = require("../models/User");
+const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const Admin = require("../models/Admin");
 
+const router = express.Router();
+
+// LOGIN
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
-  const user = await User.findOne({ email });
-  if (!user) return res.status(404).json("User not found");
+  const admin = await Admin.findOne({ username });
+  if (!admin) return res.status(401).json({ error: "Invalid credentials" });
 
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) return res.status(401).json("Wrong password");
+  const isMatch = await bcrypt.compare(password, admin.password);
+  if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
 
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+  const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
+    expiresIn: "1d"
+  });
+
   res.json({ token });
 });
 
